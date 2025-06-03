@@ -1,34 +1,71 @@
 #!/bin/bash
 
-# Função para exibir mensagens padronizadas
-function exibir_mensagem() {
-    numero_item=$1
-    nome_item=$2
-    conformidade=$3
-    echo "$conformidade: $numero_item - $nome_item"
-}
+echo
 
-# Função para verificar se arquivos de log em /var/log estão com permissões, dono e grupo corretos
-function verificar_permissoes_logs() {
-    numero_item=$1
-    nome_item=$2
+Função para exibir mensagens de conformidade ou atenção
 
-    arquivos_incorretos=$(find -L /var/log -type f -perm /0137 -o ! -user root -o ! -group root -print)
+function exibir_mensagem() { numero_item=$1 nome_item=$2 conformidade=$3 echo "$conformidade: $numero_item - $nome_item" }
 
-    if [ -z "$arquivos_incorretos" ]; then
-        exibir_mensagem "$numero_item" "$nome_item" "CONFORME"
-    else
-        exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO"
-        echo "Arquivos com problemas de permissões ou propriedade:"
-        echo "$arquivos_incorretos"
+Função para verificar configurações específicas
+
+function verificar_configuracao() { configuracao=$1 if eval $configuracao; then exibir_mensagem "$numero_item" "$nome_item" "CONFORME" else exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO" fi }
+
+Função para verificar configurações persistentes
+
+function verificar_persistencia() { parametro=$1 valor_esperado=$2 caminhos=( "/etc/sysctl.conf" "/etc/sysctl.d/.conf" "/usr/lib/sysctl.d/.conf" "/lib/sysctl.d/*.conf" )
+
+encontrado=""
+
+for caminho in "${caminhos[@]}"; do
+    if grep -Pqs "^\s*$parametro\s*=\s*$valor_esperado" $caminho 2>/dev/null; then
+        encontrado="$caminho"
+        break
     fi
+done
+
+if [ -n "$encontrado" ]; then
+    echo "Configurado de forma persistente em: $encontrado"
+else
+    echo "ATENÇÃO: Não encontrado em arquivos persistentes. Pode se perder após reboot."
+fi
+
 }
-
-########## INÍCIO DO ITEM 5.1.4 ##########
-
-numero_item="5.1.4"
-nome_item="Garantir que todos os arquivos de log tenham permissões apropriadas configuradas"
-verificar_permissoes_logs "$numero_item" "$nome_item"
 
 echo
-echo "##### Verificação concluída! #####"
+
+Item 1.4.1
+
+numero_item="1.4.1" nome_item="Garantir que o ASLR (Address Space Layout Randomization) esteja habilitado" verificar_configuracao 'sysctl kernel.randomize_va_space | grep -q "kernel.randomize_va_space = 2"'
+
+Verificação persistente
+
+verificar_persistencia "kernel.randomize_va_space" "2"
+
+echo
+
+Item 1.4.2
+
+numero_item="1.4.2" nome_item="Garantir que o ptrace_scope esteja restrito" verificar_configuracao 'sysctl kernel.yama.ptrace_scope | grep -q "kernel.yama.ptrace_scope = 1"'
+
+Verificação persistente
+
+verificar_persistencia "kernel.yama.ptrace_scope" "1"
+
+echo
+
+Item 1.4.3
+
+numero_item="1.4.3" nome_item="Garantir que o core dump backtraces esteja desabilitado" verificar_configuracao 'grep -Pq "^\sProcessSizeMax\s=\s*0" /etc/systemd/coredump.conf'
+
+echo
+
+Item 1.4.4
+
+numero_item="1.4.4" nome_item="Garantir que o core dump storage esteja desabilitado" verificar_configuracao 'grep -Pq "^\sStorage\s=\s*none" /etc/systemd/coredump.conf'
+
+echo
+
+Finalização do script
+
+echo "##### Verificação concluída! #####" echo
+
