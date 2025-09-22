@@ -10,47 +10,53 @@ function exibir_mensagem() {
 
 echo
 
-######################
-# Início da verificação
-######################
-
-# 1.2.1
-numero_item="1.2.1"
-nome_item="Garantir que as chaves GPG estejam configuradas"
-if grep -qri "gpgkey" /etc/yum.repos.d/ /etc/dnf/dnf.conf; then
+# Item 1.4.1
+numero_item="1.4.1"
+nome_item="Garantir que a senha do bootloader esteja configurada"
+if grep -Eq '^GRUB2_PASSWORD=grub.pbkdf2.sha512' /boot/grub2/user.cfg 2>/dev/null; then
     exibir_mensagem "$numero_item" "$nome_item" "CONFORME"
 else
     exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO"
 fi
 
-# 1.2.2
-numero_item="1.2.2"
-nome_item="Garantir que a verificação de GPG esteja globalmente ativada"
-if grep -Eq '^\s*gpgcheck\s*=\s*1' /etc/dnf/dnf.conf && \
-   ! grep -P '\bgpgcheck\s*=\s*0\b' /etc/yum.repos.d/* &>/dev/null; then
-    exibir_mensagem "$numero_item" "$nome_item" "CONFORME"
-else
-    exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO"
-fi
+echo
 
-# 1.2.3
-numero_item="1.2.3"
-nome_item="Garantir que os repositórios do gerenciador de pacotes estejam corretamente configurados"
-if [ -f /etc/yum.repos.d/redhat.repo ]; then
-    exibir_mensagem "$numero_item" "$nome_item" "CONFORME"
-else
-    exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO"
-fi
+# Item 1.4.2 - Permissões dos arquivos do bootloader
 
-# 1.2.4
-numero_item="1.2.4"
-nome_item="Garantir que o repo_gpgcheck esteja globalmente ativado"
-if grep -q "^repo_gpgcheck=1" /etc/dnf/dnf.conf && \
-   ! grep -r "repo_gpgcheck=0" /etc/yum.repos.d/ &>/dev/null; then
-    exibir_mensagem "$numero_item" "$nome_item" "CONFORME"
-else
-    exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO"
-fi
+numero_item="1.4.2"
+nome_item="Garantir permissões seguras nos arquivos do GRUB2"
+
+arquivo1="/boot/grub2/grub.cfg"
+arquivo2="/boot/grub2/grubenv"
+arquivo3="/boot/grub2/user.cfg"
+
+# Função auxiliar para verificar permissões e propriedade
+verificar_arquivo_boot() {
+    arquivo=$1
+    permissao_esperada=$2
+    dono_esperado="root"
+    grupo_esperado="root"
+
+    if [ -f "$arquivo" ]; then
+        permissao_atual=$(stat -c "%a" "$arquivo")
+        dono_atual=$(stat -c "%U" "$arquivo")
+        grupo_atual=$(stat -c "%G" "$arquivo")
+
+        if [ "$permissao_atual" -le "$permissao_esperada" ] && \
+           [ "$dono_atual" == "$dono_esperado" ] && \
+           [ "$grupo_atual" == "$grupo_esperado" ]; then
+            exibir_mensagem "$numero_item" "$nome_item ($arquivo)" "CONFORME"
+        else
+            exibir_mensagem "$numero_item" "$nome_item ($arquivo)" "ATENÇÃO"
+        fi
+    else
+        exibir_mensagem "$numero_item" "$nome_item ($arquivo)" "ATENÇÃO (Arquivo não encontrado)"
+    fi
+}
+
+verificar_arquivo_boot "$arquivo1" 700
+verificar_arquivo_boot "$arquivo2" 600
+verificar_arquivo_boot "$arquivo3" 600
 
 echo
 echo "##### Verificação concluída! #####"
