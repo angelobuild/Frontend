@@ -85,69 +85,78 @@ function verificar_configuracao() {
     fi
 }
 
+# Função para verificar permissão de arquivo
+function verificar_permissao_arquivo() {
+    arquivo=$1
+    permissao_esperada=$2
+    numero_item=$3
+    nome_item=$4
+
+    if [ ! -f "$arquivo" ]; then
+        exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO (Arquivo não encontrado)"
+        return
+    fi
+
+    permissao_atual=$(stat -c %a "$arquivo")
+    if [ "$permissao_atual" -le "$permissao_esperada" ]; then
+        exibir_mensagem "$numero_item" "$nome_item" "CONFORME"
+    else
+        exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO"
+    fi
+}
+
+# Função para verificar propriedade de arquivo
+function verificar_propriedade_arquivo() {
+    arquivo=$1
+    numero_item=$2
+    nome_item=$3
+
+    if [ ! -f "$arquivo" ]; then
+        exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO (Arquivo não encontrado)"
+        return
+    fi
+
+    proprietario=$(stat -c %U "$arquivo")
+    grupo=$(stat -c %G "$arquivo")
+
+    if [[ "$proprietario" == "root" && "$grupo" == "root" ]]; then
+        exibir_mensagem "$numero_item" "$nome_item" "CONFORME"
+    else
+        exibir_mensagem "$numero_item" "$nome_item" "ATENÇÃO"
+    fi
+}
+
 echo
 
-# Item 1.7.1
+# 1.7.1
 numero_item="1.7.1"
-nome_item="Garantir que o arquivo /etc/motd esteja configurado corretamente"
-verificar_configuracao '[ -f /etc/motd ] && ! grep -Eq "(\\v|\\r|\\m|\\s)" /etc/motd'
+nome_item="Garantir que a mensagem do /etc/motd esteja configurada apropriadamente"
+verificar_configuracao 'grep -Eq "(\\v|\\r|\\m|\\s)" /etc/motd && echo "ATENÇÃO: /etc/motd contém informações do sistema" || echo "CONFORME: /etc/motd OK"'
 
-echo
-
-# Item 1.7.2
+# 1.7.2
 numero_item="1.7.2"
-nome_item="Garantir que o arquivo /etc/issue esteja configurado corretamente"
-verificar_configuracao '[ -f /etc/issue ] && ! grep -Eq "(\\v|\\r|\\m|\\s)" /etc/issue'
+nome_item="Garantir que a mensagem do /etc/issue esteja configurada apropriadamente"
+verificar_configuracao 'grep -Eq "(\\v|\\r|\\m|\\s)" /etc/issue && echo "ATENÇÃO: /etc/issue contém informações do sistema" || echo "CONFORME: /etc/issue OK"'
 
-echo
-
-# Item 1.7.3
+# 1.7.3
 numero_item="1.7.3"
-nome_item="Garantir que o arquivo /etc/issue.net esteja configurado corretamente"
-verificar_configuracao '[ -f /etc/issue.net ] && ! grep -Eq "(\\v|\\r|\\m|\\s)" /etc/issue.net'
+nome_item="Garantir que a mensagem do /etc/issue.net esteja configurada apropriadamente"
+verificar_configuracao 'grep -Eq "(\\v|\\r|\\m|\\s)" /etc/issue.net && echo "ATENÇÃO: /etc/issue.net contém informações do sistema" || echo "CONFORME: /etc/issue.net OK"'
 
-echo
-
-# Item 1.7.4
+# 1.7.4
 numero_item="1.7.4"
-nome_item="Garantir que a permissão do arquivo /etc/motd seja 644"
-verificar_configuracao '[ -f /etc/motd ] && stat -c "%a" /etc/motd | grep -q "^644$"'
+nome_item="Garantir permissões adequadas no /etc/issue"
+verificar_permissao_arquivo "/etc/issue" 644 "$numero_item" "$nome_item"
 
-echo
-
-# Item 1.7.5
+# 1.7.5
 numero_item="1.7.5"
-nome_item="Garantir que a propriedade do arquivo /etc/motd seja root:root"
-verificar_configuracao '[ -f /etc/motd ] && [ "$(stat -c "%U:%G" /etc/motd)" = "root:root" ]'
+nome_item="Garantir que /etc/issue seja de propriedade de root:root"
+verificar_propriedade_arquivo "/etc/issue" "$numero_item" "$nome_item"
 
-echo
-
-# Item 1.7.6
+# 1.7.6
 numero_item="1.7.6"
-nome_item="Garantir que a permissão do arquivo /etc/issue seja 644"
-verificar_configuracao '[ -f /etc/issue ] && stat -c "%a" /etc/issue | grep -q "^644$"'
-
-echo
-
-# Item 1.7.7
-numero_item="1.7.7"
-nome_item="Garantir que a propriedade do arquivo /etc/issue seja root:root"
-verificar_configuracao '[ -f /etc/issue ] && [ "$(stat -c "%U:%G" /etc/issue)" = "root:root" ]'
-
-echo
-
-# Item 1.7.8
-numero_item="1.7.8"
-nome_item="Garantir que a permissão do arquivo /etc/issue.net seja 644"
-verificar_configuracao '[ -f /etc/issue.net ] && stat -c "%a" /etc/issue.net | grep -q "^644$"'
-
-echo
-
-# Item 1.7.9
-numero_item="1.7.9"
-nome_item="Garantir que a propriedade do arquivo /etc/issue.net seja root:root"
-verificar_configuracao '[ -f /etc/issue.net ] && [ "$(stat -c "%U:%G" /etc/issue.net)" = "root:root" ]'
+nome_item="Garantir que /etc/issue.net seja de propriedade de root:root"
+verificar_propriedade_arquivo "/etc/issue.net" "$numero_item" "$nome_item"
 
 echo
 echo "##### Verificação concluída! #####"
-
